@@ -14,7 +14,7 @@ async function readReservations() {
   }
 }
 
-async function writeReservations(reservations) {
+async function writeReservations(reservations: any[]) {
   await fs.writeFile(dataFilePath, JSON.stringify(reservations, null, 2));
 }
 
@@ -52,9 +52,8 @@ export async function POST(request: NextRequest) {
     }
 
     const reservations = await readReservations();
-    
     // 查找是否已存在该用户的预定
-    const existingIndex = reservations.findIndex(r => r.userId === data.userId);
+    const existingIndex = reservations.findIndex((r: { userId: string }) => r.userId === data.userId);
     
     if (existingIndex !== -1) {
       // 如果存在，更新预定
@@ -76,8 +75,20 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-  reservations = reservations.filter(r => r.userId !== userId);
-  return NextResponse.json({ success: true });
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
+    let reservations = await readReservations();
+    reservations = reservations.filter((r: { userId: string }) => r.userId !== userId);
+    await writeReservations(reservations);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting reservation:', error);
+    return NextResponse.json({ error: 'Failed to delete reservation' }, { status: 500 });
+  }
 }

@@ -30,7 +30,7 @@ export default function Specials() {
     <section className="specials bg-gray-100 py-12">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold text-black">This week's specials!</h2>
+          <h2 className="text-3xl font-bold text-black">This week&apos;s specials!</h2>
           <button className="bg-yellow-400 text-black font-bold py-2 px-4 rounded">
             Online Menu
           </button>
