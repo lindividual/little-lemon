@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { kv } from '@vercel/kv';
 
-const dataFilePath = path.join(process.cwd(), 'data', 'reservations.json');
+// const kvUrl = process.env.KV_URL;
 
-async function readReservations() {
-  try {
-    const data = await fs.readFile(dataFilePath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading reservations:', error);
-    return [];
-  }
+async function getReservation(userId: string) {
+  return await kv.get(`reservation:${userId}`);
 }
 
-async function writeReservations(reservations: any[]) {
-  await fs.writeFile(dataFilePath, JSON.stringify(reservations, null, 2));
+async function saveReservation(reservation: any) {
+  await kv.set(`reservation:${reservation.userId}`, reservation);
+}
+
+async function deleteReservation(userId: string) {
+  await kv.del(`reservation:${userId}`);
 }
 
 export async function GET(request: NextRequest) {
@@ -27,8 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    const reservations = await readReservations();
-    const reservation = reservations.find((r: any) => r.userId === userId);
+    const reservation = await getReservation(userId);
 
     if (!reservation) {
       return NextResponse.json({ error: 'Reservation not found' }, { status: 404 });
@@ -51,20 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'userId is required' }, { status: 400 });
     }
 
-    const reservations = await readReservations();
-    // 查找是否已存在该用户的预定
-    const existingIndex = reservations.findIndex((r: { userId: string }) => r.userId === data.userId);
-    
-    if (existingIndex !== -1) {
-      // 如果存在，更新预定
-      reservations[existingIndex] = data;
-    } else {
-      // 如果不存在，添加新预定
-      reservations.push(data);
-    }
-
-    // 保存更新后的预定列表
-    await writeReservations(reservations);
+    await saveReservation(data);
 
     console.log('API: Saved reservation:', data);
     return NextResponse.json({ success: true, reservation: data });
@@ -82,9 +65,8 @@ export async function DELETE(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
-    let reservations = await readReservations();
-    reservations = reservations.filter((r: { userId: string }) => r.userId !== userId);
-    await writeReservations(reservations);
+
+    await deleteReservation(userId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
